@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 300px;
+            padding: 15px;
+            font-family: Arial, sans-serif;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #f0b90b;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #d9a506;
+        }
+        .info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .current-price {
+            color: #0ECB81;
+            font-weight: bold;
+        }
+        .hint {
+            font-size: 11px;
+            color: #666;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+<h3 style="margin-top: 0;">Cài Đặt Giá</h3>
+
+<div class="input-group">
+    <label>Phần trăm điều chỉnh (%):</label>
+    <input type="text" id="percentInput" placeholder="Ví dụ: -5,5 hoặc 3,2">
+    <div class="hint">Dùng dấu "," cho số thập phân. VD: -5,5 = giảm 5.5%, 3 = tăng 3%</div>
+</div>
+
+<div class="input-group">
+    <label>Số lượng coin:</label>
+    <input type="text" id="amountInput" placeholder="Nhập số lượng">
+</div>
+
+<button id="setPriceBtn">Set Giá</button>
+
+<div class="info" id="resultInfo" style="display: none;">
+    <div style="color: #0ECB81; font-weight: bold; margin-bottom: 5px;">✓ Đã thay đổi giá</div>
+    <div>Giá hiện tại: <span class="current-price" id="currentPrice">--</span></div>
+    <div>Giá sau điều chỉnh: <span class="current-price" id="adjustedPrice">--</span></div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
