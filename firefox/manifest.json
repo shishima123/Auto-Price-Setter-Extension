@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Auto Price Setter",
-  "version": "1.0",
-  "description": "Tự động set giá giao dịch với phần trăm tùy chỉnh",
+  "version": "1.3",
+  "description": "Tự động set giá theo %, fixed, tổng tiền, số lượng và lệnh đảo ngược",
 
   "permissions": ["activeTab", "storage"],
 
@@ -29,6 +29,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+
   "browser_specific_settings": {
     "gecko": {
       "id": "binance-alpha@yourdomain.com",
