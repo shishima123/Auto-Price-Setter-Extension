@@ -1,0 +1,38 @@
+{
+  "manifest_version": 2,
+  "name": "Auto Price Setter",
+  "version": "1.0",
+  "description": "Tự động set giá giao dịch với phần trăm tùy chỉnh",
+
+  "permissions": ["activeTab", "storage"],
+
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "binance-alpha@yourdomain.com",
+      "strict_min_version": "109.0"
+    }
+  }
+}
