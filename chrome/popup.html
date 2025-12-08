@@ -8,67 +8,60 @@
             padding: 15px;
             font-family: Arial, sans-serif;
         }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 14px;
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
+        input[type="text"] {
+            width: 100%; padding: 8px; border: 1px solid #ccc;
+            border-radius: 4px; box-sizing: border-box; font-size: 14px;
         }
         button {
-            width: 100%;
-            padding: 10px;
-            background-color: #f0b90b;
-            color: #000;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        button:hover {
-            background-color: #d9a506;
+            width: 100%; padding: 10px;
+            background-color: #f0b90b; color: #000;
+            border: none; border-radius: 4px;
+            cursor: pointer; font-weight: bold; font-size: 14px;
         }
         .info {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            font-size: 12px;
+            margin-top: 10px; padding: 10px;
+            background-color: #f5f5f5; border-radius: 4px; font-size: 12px;
         }
-        .current-price {
-            color: #0ECB81;
-            font-weight: bold;
-        }
-        .hint {
-            font-size: 11px;
-            color: #666;
-            margin-top: 3px;
-        }
+        .current-price { color: #0ECB81; font-weight: bold; }
+        .hint { font-size: 11px; color: #666; margin-top: 3px; }
     </style>
 </head>
 <body>
+
 <h3 style="margin-top: 0;">Cài Đặt Giá</h3>
 
 <div class="input-group">
-    <label>Phần trăm điều chỉnh (%):</label>
-    <input type="text" id="percentInput" placeholder="Ví dụ: -5,5 hoặc 3,2">
-    <div class="hint">Dùng dấu "," cho số thập phân. VD: -5,5 = giảm 5.5%, 3 = tăng 3%</div>
+    <label>Chế độ điều chỉnh:</label>
+    <label><input type="radio" name="mode" value="percent" checked> Theo %</label>
+    <label><input type="radio" name="mode" value="fixed"> Theo Fixed</label>
+</div>
+
+<div class="input-group">
+    <label>Giá trị (% hoặc Fixed):</label>
+    <input type="text" id="valueInput" placeholder="VD: -5,5 hoặc 10">
+    <div class="hint">Fixed: tăng n đơn vị vào phần thập phân cuối</div>
+</div>
+
+<div class="input-group">
+    <label>Phương thức tính:</label>
+    <label><input type="radio" name="calcMode" value="amount" checked> Số lượng coin</label>
+    <label><input type="radio" name="calcMode" value="total"> Tổng tiền</label>
 </div>
 
 <div class="input-group">
     <label>Số lượng coin:</label>
-    <input type="text" id="amountInput" placeholder="Nhập số lượng">
+    <input type="text" id="amountInput" placeholder="VD: 1.25">
+</div>
+
+<div class="input-group">
+    <label>Tổng tiền (USDT):</label>
+    <input type="text" id="totalInput" placeholder="VD: 100,5">
+</div>
+
+<div class="input-group">
+    <label><input type="checkbox" id="reverseMode"> Lệnh đảo ngược (tự động tính limitTotal thứ 2)</label>
 </div>
 
 <button id="setPriceBtn">Set Giá</button>

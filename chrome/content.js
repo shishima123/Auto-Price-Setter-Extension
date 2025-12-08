@@ -1,82 +1,165 @@
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+
     if (request.action === 'setPrice') {
         try {
-            const currentPrice = getLatestPrice();
 
-            if (!currentPrice) {
-                sendResponse({success: false, error: 'Không tìm thấy giá'});
-                return true;
+            const currentPrice = getLatestPrice();
+            if (!currentPrice)
+                return sendResponse({ success: false, error: 'Không tìm thấy giá' });
+
+            let adjustedPrice = 0;
+            const priceNum = parseFloat(currentPrice);
+
+            // ========================
+            // MODE % / FIXED
+            // ========================
+            if (request.mode === "percent") {
+                adjustedPrice = priceNum * (1 + request.value / 100);
+            } else {
+                let p = priceNum.toFixed(8);
+                let parts = p.split('.');
+                let decimals = parts[1];
+                let arr = decimals.split('').map(d => parseInt(d));
+
+                arr[7] += request.value;
+
+                for (let i = 7; i >= 0; i--) {
+                    if (arr[i] > 9) {
+                        arr[i] -= 10;
+                        if (i > 0) arr[i - 1] += 1;
+                    }
+                }
+                adjustedPrice = parseFloat(parts[0] + "." + arr.join(''));
             }
 
-            // Calculate adjusted price
-            const adjustedPrice = parseFloat(currentPrice) * (1 + request.percent / 100);
-
-            // Set price
+            // ========================
+            // SET PRICE
+            // ========================
             const priceInput = document.getElementById('limitPrice');
             if (priceInput) {
-                // Use comma as decimal separator
-                const priceStr = adjustedPrice.toFixed(8).replace('.', ',');
-                priceInput.value = priceStr;
-
-                // Trigger input event
+                priceInput.value = adjustedPrice.toFixed(8).replace('.', ',');
                 priceInput.dispatchEvent(new Event('input', { bubbles: true }));
                 priceInput.dispatchEvent(new Event('change', { bubbles: true }));
-            } else {
-                sendResponse({success: false, error: 'Không tìm thấy input giá'});
-                return true;
             }
 
-            // Set amount if provided
-            if (request.amount) {
-                const amountInput = document.getElementById('limitAmount');
-                if (amountInput) {
-                    // Use comma as decimal separator
-                    const amountStr = request.amount.replace('.', ',');
-                    amountInput.value = amountStr;
+            // ========================
+            // FIND TWO limitTotal INPUTS
+            // ========================
+            const totalInputs = document.querySelectorAll('#limitTotal');
+            const mainTotalInput = totalInputs[0] || null;
+            const reverseTotalInput = totalInputs[1] || null;
 
-                    // Trigger input event
+            // ========================
+            // PHƯƠNG THỨC TÍNH
+            // ========================
+            if (request.calcMode === "total") {
+
+                // ✓ USER CHỌN "TỔNG TIỀN"
+                if (mainTotalInput && request.total !== "") {
+                    mainTotalInput.value = request.total.replace('.', ',');
+                    mainTotalInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    mainTotalInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+            } else {
+
+                // ✓ USER CHỌN "SỐ LƯỢNG COIN"
+                const amountInput = document.getElementById('limitAmount');
+                if (amountInput && request.amount) {
+                    amountInput.value = request.amount.replace('.', ',');
                     amountInput.dispatchEvent(new Event('input', { bubbles: true }));
                     amountInput.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
 
+            // ========================
+            // LỆNH ĐẢO NGƯỢC
+            // ========================
+            if (request.reverseMode) {
+                const limitVal = shrinkDecimal(adjustedPrice);
+
+                if (reverseTotalInput) {
+                    reverseTotalInput.value = limitVal.replace('.', ',');
+                    reverseTotalInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    reverseTotalInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+
             sendResponse({
                 success: true,
-                currentPrice: parseFloat(currentPrice).toFixed(8),
+                currentPrice: priceNum.toFixed(8),
                 adjustedPrice: adjustedPrice.toFixed(8)
             });
-        } catch (error) {
-            sendResponse({success: false, error: error.message});
+
+        } catch (e) {
+            sendResponse({ success: false, error: e.message });
         }
+
         return true;
     }
 });
 
+// ========================
+// shrinkDecimal FUNCTION
+// ========================
+function shrinkDecimal(num) {
+    const [int, dec] = num.toFixed(8).split('.');
+    let idx = dec.search(/[1-9]/);
+    if (idx === -1) return "0";
+    return int + "." + dec.slice(0, idx + 1);
+}
+
+// ========================
+// GET LATEST PRICE (BINANCE)
+// ========================
+// Thay toàn bộ hàm cũ bằng hàm này trong content.js :contentReference[oaicite:0]{index=0}
 function getLatestPrice() {
-    // 1️⃣ Tìm phần tử chứa text "Giao dịch lệnh Limit"
-    const limitTitle = Array.from(document.querySelectorAll('div, span'))
-        .find(el => el.textContent.trim() === 'Giao dịch lệnh Limit');
+    // Lấy tất cả grid của ReactVirtualized
+    const grids = document.querySelectorAll('.ReactVirtualized__Grid__innerScrollContainer');
+    if (!grids.length) return null;
 
-    if (!limitTitle) return null;
+    for (const grid of grids) {
+        // Tìm container bao quanh grid này
+        const container = grid.closest('.w-full.h-full');
+        if (!container) continue;
 
-    // 2️⃣ Từ phần tiêu đề, tìm container chính bao quanh bảng giá
-    const container = limitTitle.closest('.text-PrimaryText');
-    if (!container) return null;
+        // Tìm hàng header: Thời gian / Giá (USDT) / Số lượng (...)
+        const header = container.querySelector(
+            '.flex.items-center.justify-between.gap-1.text-TertiaryText'
+        );
+        if (!header) continue;
 
-    // 3️⃣ Tìm phần có role="grid" hoặc class chứa "ReactVirtualized"
-    const grid = container.querySelector('[role="grid"], .ReactVirtualized__Grid__innerScrollContainer');
-    if (!grid) return null;
+        const cols = header.querySelectorAll('div');
+        if (cols.length < 3) continue;
 
-    // 4️⃣ Tìm các dòng dữ liệu trong grid
-    const rows = grid.querySelectorAll('.flex.items-center');
-    if (!rows.length) return null;
+        const colTime = cols[0].textContent.trim();
+        const colPrice = cols[1].textContent.trim();
+        const colAmount = cols[2].textContent.trim();
 
-    // 5️⃣ Lấy giá từ dòng đầu tiên (ô thứ 2 thường là giá)
-    const firstRow = rows[0];
-    const priceCell = firstRow.querySelectorAll('div')[1];
-    if (!priceCell) return null;
+        // Kiểm tra đúng panel "Các giao dịch"
+        const isTradeHeader =
+            colTime.includes('Thời gian') &&
+            colPrice.includes('Giá') &&
+            colPrice.includes('USDT') &&
+            colAmount.startsWith('Số lượng');
 
-    // 6️⃣ Trả về giá dạng số
-    const priceText = priceCell.textContent.trim().replace(',', '.');
-    return priceText;
+        if (!isTradeHeader) continue;
+
+        // Đến đây thì chắc chắn đây là panel "Các giao dịch" đúng
+        const firstRow = grid.querySelector('div[role="gridcell"]');
+        if (!firstRow) return null;
+
+        const cells = firstRow.querySelectorAll('div');
+        if (cells.length < 2) return null;
+
+        const rawPrice = cells[1].textContent.trim();
+
+        // Đổi , -> . cho chắc (phòng trường hợp locale khác)
+        const normalized = rawPrice.replace(',', '.');
+
+        return normalized;
+    }
+
+    // Nếu không tìm được grid nào khớp header
+    return null;
 }

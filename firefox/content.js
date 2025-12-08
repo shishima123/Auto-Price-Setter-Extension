@@ -113,23 +113,52 @@ function shrinkDecimal(num) {
 // GET LATEST PRICE (BINANCE)
 // ========================
 function getLatestPrice() {
-    const limitTitle = Array.from(document.querySelectorAll('div, span'))
-        .find(el => el.textContent.trim() === 'Giao dịch lệnh Limit');
+    // Lấy tất cả grid của ReactVirtualized
+    const grids = document.querySelectorAll('.ReactVirtualized__Grid__innerScrollContainer');
+    if (!grids.length) return null;
 
-    if (!limitTitle) return null;
+    for (const grid of grids) {
+        // Tìm container bao quanh grid này
+        const container = grid.closest('.w-full.h-full');
+        if (!container) continue;
 
-    const container = limitTitle.closest('.text-PrimaryText');
-    if (!container) return null;
+        // Tìm hàng header: Thời gian / Giá (USDT) / Số lượng (...)
+        const header = container.querySelector(
+            '.flex.items-center.justify-between.gap-1.text-TertiaryText'
+        );
+        if (!header) continue;
 
-    const grid = container.querySelector('[role="grid"], .ReactVirtualized__Grid__innerScrollContainer');
-    if (!grid) return null;
+        const cols = header.querySelectorAll('div');
+        if (cols.length < 3) continue;
 
-    const rows = grid.querySelectorAll('.flex.items-center');
-    if (!rows.length) return null;
+        const colTime = cols[0].textContent.trim();
+        const colPrice = cols[1].textContent.trim();
+        const colAmount = cols[2].textContent.trim();
 
-    const firstRow = rows[0];
-    const priceCell = firstRow.querySelectorAll('div')[1];
-    if (!priceCell) return null;
+        // Kiểm tra đúng panel "Các giao dịch"
+        const isTradeHeader =
+            colTime.includes('Thời gian') &&
+            colPrice.includes('Giá') &&
+            colPrice.includes('USDT') &&
+            colAmount.startsWith('Số lượng');
 
-    return priceCell.textContent.trim().replace(',', '.');
+        if (!isTradeHeader) continue;
+
+        // Đến đây thì chắc chắn đây là panel "Các giao dịch" đúng
+        const firstRow = grid.querySelector('div[role="gridcell"]');
+        if (!firstRow) return null;
+
+        const cells = firstRow.querySelectorAll('div');
+        if (cells.length < 2) return null;
+
+        const rawPrice = cells[1].textContent.trim();
+
+        // Đổi , -> . cho chắc (phòng trường hợp locale khác)
+        const normalized = rawPrice.replace(',', '.');
+
+        return normalized;
+    }
+
+    // Nếu không tìm được grid nào khớp header
+    return null;
 }

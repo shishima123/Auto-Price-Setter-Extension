@@ -1,50 +1,60 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const resultInfo = document.getElementById('resultInfo');
     const currentPriceEl = document.getElementById('currentPrice');
     const adjustedPriceEl = document.getElementById('adjustedPrice');
 
-    // Load saved values
-    chrome.storage.local.get(['percent', 'amount'], function(result) {
-        if (result.percent) document.getElementById('percentInput').value = result.percent;
-        if (result.amount) document.getElementById('amountInput').value = result.amount;
+    chrome.storage.local.get(['mode', 'calcMode', 'value', 'amount', 'total', 'reverseMode'], function (res) {
+
+        if (res.mode)
+            document.querySelector(`input[name="mode"][value="${res.mode}"]`).checked = true;
+
+        if (res.calcMode)
+            document.querySelector(`input[name="calcMode"][value="${res.calcMode}"]`).checked = true;
+
+        if (res.value) document.getElementById('valueInput').value = res.value;
+        if (res.amount) document.getElementById('amountInput').value = res.amount;
+        if (res.total) document.getElementById('totalInput').value = res.total;
+        if (res.reverseMode) document.getElementById('reverseMode').checked = true;
     });
 
-    // Set price button
-    document.getElementById('setPriceBtn').addEventListener('click', function() {
-        const percentStr = document.getElementById('percentInput').value.trim();
+    document.getElementById('setPriceBtn').addEventListener('click', function () {
+
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const calcMode = document.querySelector('input[name="calcMode"]:checked').value;
+
+        const valueStr = document.getElementById('valueInput').value.trim();
         const amount = document.getElementById('amountInput').value.trim();
+        const total = document.getElementById('totalInput').value.trim();
+        const reverseMode = document.getElementById('reverseMode').checked;
 
-        // Convert comma to dot for decimal
-        const percent = percentStr.replace(',', '.');
+        if (!valueStr) return alert('Vui lòng nhập giá trị!');
 
-        if (!percent) {
-            alert('Vui lòng nhập phần trăm điều chỉnh!');
-            return;
-        }
+        const value = valueStr.replace(',', '.');
+        if (isNaN(parseFloat(value))) return alert('Giá trị không hợp lệ!');
 
-        if (isNaN(parseFloat(percent))) {
-            alert('Phần trăm không hợp lệ!');
-            return;
-        }
-
-        // Save values
         chrome.storage.local.set({
-            percent: percentStr,
-            amount: amount
+            mode,
+            calcMode,
+            value: valueStr,
+            amount,
+            total,
+            reverseMode
         });
 
-        // Send message to content script
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             chrome.tabs.sendMessage(tabs[0].id, {
                 action: 'setPrice',
-                percent: parseFloat(percent),
-                amount: amount
-            }, function(response) {
+                mode,
+                calcMode,
+                value: parseFloat(value),
+                amount,
+                total,
+                reverseMode
+            }, function (response) {
                 if (response && response.success) {
-                    // Update display with actual prices
                     currentPriceEl.textContent = response.currentPrice;
                     adjustedPriceEl.textContent = response.adjustedPrice;
-                    showResult('✓ Đã thay đổi giá thành công!', true);
+                    resultInfo.style.display = "block";
                 } else {
                     alert('Lỗi: ' + (response ? response.error : 'Không thể kết nối với trang'));
                 }
@@ -52,14 +62,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    function showResult(message, success) {
-        resultInfo.style.display = 'block';
-        resultInfo.style.backgroundColor = success ? '#f5f5f5' : '#ffe5e5';
-        resultInfo.querySelector('div:first-child').textContent = message;
-
-        if (!success) {
-            currentPriceEl.textContent = '--';
-            adjustedPriceEl.textContent = '--';
-        }
-    }
 });
