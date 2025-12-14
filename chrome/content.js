@@ -16,20 +16,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             if (request.mode === "percent") {
                 adjustedPrice = priceNum * (1 + request.value / 100);
             } else {
-                let p = priceNum.toFixed(8);
-                let parts = p.split('.');
-                let decimals = parts[1];
-                let arr = decimals.split('').map(d => parseInt(d));
-
-                arr[7] += request.value;
-
-                for (let i = 7; i >= 0; i--) {
-                    if (arr[i] > 9) {
-                        arr[i] -= 10;
-                        if (i > 0) arr[i - 1] += 1;
-                    }
-                }
-                adjustedPrice = parseFloat(parts[0] + "." + arr.join(''));
+                // Fixed = số tick thập phân cuối (1 tick = 1e-8)
+                adjustedPrice = priceNum + request.value * 1e-8;
             }
 
             // ========================
@@ -112,7 +100,6 @@ function shrinkDecimal(num) {
 // ========================
 // GET LATEST PRICE (BINANCE)
 // ========================
-// Thay toàn bộ hàm cũ bằng hàm này trong content.js :contentReference[oaicite:0]{index=0}
 function getLatestPrice() {
     // Lấy tất cả grid của ReactVirtualized
     const grids = document.querySelectorAll('.ReactVirtualized__Grid__innerScrollContainer');

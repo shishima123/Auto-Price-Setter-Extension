@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (response && response.success) {
                     currentPriceEl.textContent = response.currentPrice;
                     adjustedPriceEl.textContent = response.adjustedPrice;
-                    resultInfo.style.display = "block";
+                    resultInfo.classList.add('show');
                 } else {
                     alert('Lỗi: ' + (response ? response.error : 'Không thể kết nối với trang'));
                 }

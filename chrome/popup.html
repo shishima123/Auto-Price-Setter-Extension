@@ -21,8 +21,21 @@
             cursor: pointer; font-weight: bold; font-size: 14px;
         }
         .info {
-            margin-top: 10px; padding: 10px;
-            background-color: #f5f5f5; border-radius: 4px; font-size: 12px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+
+            visibility: hidden;
+            height: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .info.show {
+            visibility: visible;
+            height: auto;
+            padding: 8px 10px;
+            background-color: #f5f5f5;
         }
         .current-price { color: #0ECB81; font-weight: bold; }
         .hint { font-size: 11px; color: #666; margin-top: 3px; }
@@ -66,8 +79,7 @@
 
 <button id="setPriceBtn">Set Giá</button>
 
-<div class="info" id="resultInfo" style="display: none;">
-    <div style="color: #0ECB81; font-weight: bold; margin-bottom: 5px;">✓ Đã thay đổi giá</div>
+<div class="info" id="resultInfo">
     <div>Giá hiện tại: <span class="current-price" id="currentPrice">--</span></div>
     <div>Giá sau điều chỉnh: <span class="current-price" id="adjustedPrice">--</span></div>
 </div>
