@@ -64,7 +64,17 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             // LỆNH ĐẢO NGƯỢC
             // ========================
             if (request.reverseMode) {
-                const limitVal = shrinkDecimal(adjustedPrice);
+                let limitVal;
+
+                if (request.reverseType === 'subtract') {
+                    // Giảm theo đơn vị tick: giá hiện tại - n * 1e-8
+                    const subtractNum = parseFloat((request.subtractValue || '0').replace(',', '.'));
+                    const reversePrice = priceNum - subtractNum * 1e-8;
+                    limitVal = reversePrice.toFixed(8);
+                } else {
+                    // Số thập phân gần nhất (logic cũ)
+                    limitVal = shrinkDecimal(adjustedPrice);
+                }
 
                 if (reverseTotalInput) {
                     reverseTotalInput.value = limitVal.replace('.', ',');

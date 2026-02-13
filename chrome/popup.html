@@ -1,89 +1,155 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <style>
         body {
             width: 300px;
-            padding: 15px;
+            padding: 10px 12px;
             font-family: Arial, sans-serif;
+            font-size: 13px;
+            margin: 0;
         }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 8px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 2px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .radio-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .radio-row label {
+            font-weight: normal;
+        }
+
+        .two-col {
+            display: flex;
+            gap: 8px;
+        }
+
+        .two-col .col {
+            flex: 1;
+        }
+
         input[type="text"] {
-            width: 100%; padding: 8px; border: 1px solid #ccc;
-            border-radius: 4px; box-sizing: border-box; font-size: 14px;
+            width: 100%;
+            padding: 5px 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
         }
+
         button {
-            width: 100%; padding: 10px;
-            background-color: #f0b90b; color: #000;
-            border: none; border-radius: 4px;
-            cursor: pointer; font-weight: bold; font-size: 14px;
+            width: 100%;
+            padding: 8px;
+            background-color: #f0b90b;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            margin-top: 4px;
         }
+
         .info {
-            margin-top: 10px;
+            margin-top: 6px;
             border-radius: 4px;
             font-size: 12px;
-
-            visibility: hidden;
-            height: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-
-        .info.show {
-            visibility: visible;
-            height: auto;
-            padding: 8px 10px;
+            padding: 6px 8px;
             background-color: #f5f5f5;
         }
-        .current-price { color: #0ECB81; font-weight: bold; }
-        .hint { font-size: 11px; color: #666; margin-top: 3px; }
+
+        .current-price {
+            color: #0ECB81;
+            font-weight: bold;
+        }
+
+        .hint {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
     </style>
 </head>
+
 <body>
 
-<h3 style="margin-top: 0;">Cài Đặt Giá</h3>
+    <h3>Cài Đặt Giá</h3>
 
-<div class="input-group">
-    <label>Chế độ điều chỉnh:</label>
-    <label><input type="radio" name="mode" value="percent" checked> Theo %</label>
-    <label><input type="radio" name="mode" value="fixed"> Theo Fixed</label>
-</div>
+    <div class="input-group">
+        <label>Chế độ điều chỉnh:</label>
+        <div class="radio-row">
+            <label><input type="radio" name="mode" value="percent" checked> Theo %</label>
+            <label><input type="radio" name="mode" value="fixed"> Theo Fixed</label>
+        </div>
+    </div>
 
-<div class="input-group">
-    <label>Giá trị (% hoặc Fixed):</label>
-    <input type="text" id="valueInput" placeholder="VD: -5,5 hoặc 10">
-    <div class="hint">Fixed: tăng n đơn vị vào phần thập phân cuối</div>
-</div>
+    <div class="input-group">
+        <label>Giá trị (% hoặc Fixed):</label>
+        <input type="text" id="valueInput" placeholder="VD: -5,5 hoặc 10">
+        <div class="hint">Fixed: tăng n đơn vị vào phần thập phân cuối</div>
+    </div>
 
-<div class="input-group">
-    <label>Phương thức tính:</label>
-    <label><input type="radio" name="calcMode" value="amount" checked> Số lượng coin</label>
-    <label><input type="radio" name="calcMode" value="total"> Tổng tiền</label>
-</div>
+    <div class="input-group">
+        <label>Phương thức tính:</label>
+        <div class="radio-row">
+            <label><input type="radio" name="calcMode" value="amount" checked> Số lượng coin</label>
+            <label><input type="radio" name="calcMode" value="total"> Tổng tiền</label>
+        </div>
+    </div>
 
-<div class="input-group">
-    <label>Số lượng coin:</label>
-    <input type="text" id="amountInput" placeholder="VD: 1.25">
-</div>
+    <div class="input-group two-col">
+        <div class="col">
+            <label>Số lượng coin:</label>
+            <input type="text" id="amountInput" placeholder="VD: 1.25">
+        </div>
+        <div class="col">
+            <label>Tổng tiền (USDT):</label>
+            <input type="text" id="totalInput" placeholder="VD: 100,5">
+        </div>
+    </div>
 
-<div class="input-group">
-    <label>Tổng tiền (USDT):</label>
-    <input type="text" id="totalInput" placeholder="VD: 100,5">
-</div>
+    <div class="input-group">
+        <label style="font-weight:normal;"><input type="checkbox" id="reverseMode"> Lệnh đảo ngược (limitTotal thứ
+            2)</label>
+    </div>
 
-<div class="input-group">
-    <label><input type="checkbox" id="reverseMode"> Lệnh đảo ngược (tự động tính limitTotal thứ 2)</label>
-</div>
+    <div class="input-group" id="reverseOptions" style="display:none; margin-left: 18px; margin-top: -4px;">
+        <div class="radio-row">
+            <label><input type="radio" name="reverseType" value="shrink" checked> Thập phân gần nhất</label>
+            <label><input type="radio" name="reverseType" value="subtract"> Giảm theo đơn vị</label>
+        </div>
+        <div id="subtractInputWrap" style="display:none; margin-top: 4px;">
+            <input type="text" id="subtractValue" placeholder="VD: 5">
+            <div class="hint">VD: nhập 5 → 0,32099006 thành 0,32099001</div>
+        </div>
+    </div>
 
-<button id="setPriceBtn">Set Giá</button>
+    <button id="setPriceBtn">Set Giá</button>
 
-<div class="info" id="resultInfo">
-    <div>Giá hiện tại: <span class="current-price" id="currentPrice">--</span></div>
-    <div>Giá sau điều chỉnh: <span class="current-price" id="adjustedPrice">--</span></div>
-</div>
+    <div class="info" id="resultInfo">
+        <div>Giá hiện tại: <span class="current-price" id="currentPrice">--</span></div>
+        <div>Giá sau điều chỉnh: <span class="current-price" id="adjustedPrice">--</span></div>
+    </div>
 
-<script src="popup.js"></script>
+    <script src="popup.js"></script>
 </body>
+
 </html>

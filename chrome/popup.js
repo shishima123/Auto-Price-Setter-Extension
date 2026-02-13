@@ -3,7 +3,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const currentPriceEl = document.getElementById('currentPrice');
     const adjustedPriceEl = document.getElementById('adjustedPrice');
 
-    chrome.storage.local.get(['mode', 'calcMode', 'value', 'amount', 'total', 'reverseMode'], function (res) {
+    const reverseModeEl = document.getElementById('reverseMode');
+    const reverseOptions = document.getElementById('reverseOptions');
+    const subtractInputWrap = document.getElementById('subtractInputWrap');
+
+    // Toggle hiển thị options khi tích/bỏ tích checkbox
+    function toggleReverseOptions() {
+        reverseOptions.style.display = reverseModeEl.checked ? 'block' : 'none';
+    }
+
+    // Toggle hiển thị input giảm theo đơn vị
+    function toggleSubtractInput() {
+        const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
+        subtractInputWrap.style.display = reverseType === 'subtract' ? 'block' : 'none';
+    }
+
+    reverseModeEl.addEventListener('change', toggleReverseOptions);
+    document.querySelectorAll('input[name="reverseType"]').forEach(function (radio) {
+        radio.addEventListener('change', toggleSubtractInput);
+    });
+
+    chrome.storage.local.get(['mode', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'], function (res) {
 
         if (res.mode)
             document.querySelector(`input[name="mode"][value="${res.mode}"]`).checked = true;
@@ -14,7 +34,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (res.value) document.getElementById('valueInput').value = res.value;
         if (res.amount) document.getElementById('amountInput').value = res.amount;
         if (res.total) document.getElementById('totalInput').value = res.total;
-        if (res.reverseMode) document.getElementById('reverseMode').checked = true;
+
+        if (res.reverseMode) reverseModeEl.checked = true;
+
+        if (res.reverseType)
+            document.querySelector(`input[name="reverseType"][value="${res.reverseType}"]`).checked = true;
+
+        if (res.subtractValue) document.getElementById('subtractValue').value = res.subtractValue;
+
+        toggleReverseOptions();
+        toggleSubtractInput();
     });
 
     document.getElementById('setPriceBtn').addEventListener('click', function () {
@@ -25,12 +54,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const valueStr = document.getElementById('valueInput').value.trim();
         const amount = document.getElementById('amountInput').value.trim();
         const total = document.getElementById('totalInput').value.trim();
-        const reverseMode = document.getElementById('reverseMode').checked;
+        const reverseMode = reverseModeEl.checked;
+        const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
+        const subtractValueStr = document.getElementById('subtractValue').value.trim();
 
         if (!valueStr) return alert('Vui lòng nhập giá trị!');
 
         const value = valueStr.replace(',', '.');
         if (isNaN(parseFloat(value))) return alert('Giá trị không hợp lệ!');
+
+        // Validate subtract value nếu đang chọn mode giảm theo đơn vị
+        if (reverseMode && reverseType === 'subtract' && subtractValueStr !== '') {
+            const sv = subtractValueStr.replace(',', '.');
+            if (isNaN(parseFloat(sv))) return alert('Giá trị giảm không hợp lệ!');
+        }
 
         chrome.storage.local.set({
             mode,
@@ -38,7 +75,9 @@ document.addEventListener('DOMContentLoaded', function () {
             value: valueStr,
             amount,
             total,
-            reverseMode
+            reverseMode,
+            reverseType,
+            subtractValue: subtractValueStr
         });
 
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -49,12 +88,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 value: parseFloat(value),
                 amount,
                 total,
-                reverseMode
+                reverseMode,
+                reverseType,
+                subtractValue: subtractValueStr
             }, function (response) {
                 if (response && response.success) {
                     currentPriceEl.textContent = response.currentPrice;
                     adjustedPriceEl.textContent = response.adjustedPrice;
-                    resultInfo.classList.add('show');
                 } else {
                     alert('Lỗi: ' + (response ? response.error : 'Không thể kết nối với trang'));
                 }
