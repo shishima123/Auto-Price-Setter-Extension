@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Auto Price Setter",
-  "version": "1.4",
+  "version": "1.5",
   "description": "Tự động set giá theo %, fixed, tổng tiền, số lượng và lệnh đảo ngược",
   "permissions": [
     "activeTab",
@@ -14,6 +14,17 @@
       "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "set-price": {
+      "suggested_key": {
+        "default": "Alt+S"
+      },
+      "description": "Set giá nhanh"
     }
   },
   "content_scripts": [
