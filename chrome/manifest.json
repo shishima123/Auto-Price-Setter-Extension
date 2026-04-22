@@ -25,6 +25,12 @@
         "default": "Alt+S"
       },
       "description": "Set giá nhanh"
+    },
+    "close-notification": {
+      "suggested_key": {
+        "default": "Alt+X"
+      },
+      "description": "Đóng notification của Binance"
     }
   },
   "content_scripts": [

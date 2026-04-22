@@ -1,5 +1,32 @@
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
+    if (request.action === 'closeNotification') {
+        const selectors = [
+            '.bn-notification-close',
+            '[aria-label="close"]',
+            '.bn-notification [role="button"]'
+        ];
+        let closeBtns = [];
+        for (const sel of selectors) {
+            const found = document.querySelectorAll(sel);
+            if (found.length) {
+                closeBtns = Array.from(found);
+                break;
+            }
+        }
+
+        closeBtns.forEach(btn => {
+            if (typeof btn.click === 'function') btn.click();
+            const opts = { bubbles: true, cancelable: true, view: window };
+            btn.dispatchEvent(new MouseEvent('mousedown', opts));
+            btn.dispatchEvent(new MouseEvent('mouseup', opts));
+            btn.dispatchEvent(new MouseEvent('click', opts));
+        });
+
+        sendResponse({ success: true, count: closeBtns.length });
+        return true;
+    }
+
     if (request.action === 'setPrice') {
         try {
 

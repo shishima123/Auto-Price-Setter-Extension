@@ -1,4 +1,12 @@
 chrome.commands.onCommand.addListener(function (command) {
+    if (command === 'close-notification') {
+        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+            if (!tabs[0]) return;
+            chrome.tabs.sendMessage(tabs[0].id, { action: 'closeNotification' });
+        });
+        return;
+    }
+
     if (command === 'set-price') {
         chrome.storage.local.get(
             ['mode', 'priceSource', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'],
