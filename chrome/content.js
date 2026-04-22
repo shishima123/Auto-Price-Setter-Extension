@@ -11,13 +11,25 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             const priceNum = parseFloat(currentPrice);
 
             // ========================
-            // MODE % / FIXED
+            // MODE % / FIXED / FIRST / HIGHEST
             // ========================
             if (request.mode === "percent") {
                 adjustedPrice = priceNum * (1 + request.value / 100);
-            } else {
+            } else if (request.mode === "fixed") {
                 // Fixed = số tick thập phân cuối (1 tick = 1e-8)
                 adjustedPrice = priceNum + request.value * 1e-8;
+            } else if (request.mode === "first") {
+                // Lấy thẳng giá record đầu tiên (giá hiện tại, không điều chỉnh)
+                adjustedPrice = priceNum;
+            } else if (request.mode === "highest") {
+                // Cao nhất trong 5 giá gần nhất
+                const recent = getLatestPrices(5)
+                    .map(parseFloat)
+                    .filter(n => !isNaN(n));
+                if (recent.length === 0) {
+                    return sendResponse({ success: false, error: 'Không tìm thấy giá gần nhất' });
+                }
+                adjustedPrice = Math.max(...recent);
             }
 
             // ========================

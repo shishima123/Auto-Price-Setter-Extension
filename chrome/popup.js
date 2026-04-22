@@ -6,6 +6,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const reverseModeEl = document.getElementById('reverseMode');
     const reverseOptions = document.getElementById('reverseOptions');
     const subtractInputWrap = document.getElementById('subtractInputWrap');
+    const valueGroup = document.getElementById('valueGroup');
+
+    // Mode cần nhập "value" (percent/fixed) vs mode tự lấy từ record (first/highest)
+    function modeNeedsValue(mode) {
+        return mode === 'percent' || mode === 'fixed';
+    }
+
+    function toggleValueGroup() {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        valueGroup.style.display = modeNeedsValue(mode) ? 'block' : 'none';
+    }
 
     // Toggle hiển thị options khi tích/bỏ tích checkbox
     function toggleReverseOptions() {
@@ -22,6 +33,9 @@ document.addEventListener('DOMContentLoaded', function () {
     reverseModeEl.addEventListener('change', toggleReverseOptions);
     document.querySelectorAll('input[name="reverseType"]').forEach(function (radio) {
         radio.addEventListener('change', toggleSubtractInput);
+    });
+    document.querySelectorAll('input[name="mode"]').forEach(function (radio) {
+        radio.addEventListener('change', toggleValueGroup);
     });
 
     chrome.storage.local.get(['mode', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'], function (res) {
@@ -45,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         toggleReverseOptions();
         toggleSubtractInput();
+        toggleValueGroup();
     });
 
     document.getElementById('setPriceBtn').addEventListener('click', function () {
@@ -59,10 +74,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
         const subtractValueStr = document.getElementById('subtractValue').value.trim();
 
-        if (!valueStr) return alert('Vui lòng nhập giá trị!');
-
-        const value = valueStr.replace(',', '.');
-        if (isNaN(parseFloat(value))) return alert('Giá trị không hợp lệ!');
+        const needsValue = modeNeedsValue(mode);
+        let value = 0;
+        if (needsValue) {
+            if (!valueStr) return alert('Vui lòng nhập giá trị!');
+            const parsed = parseFloat(valueStr.replace(',', '.'));
+            if (isNaN(parsed)) return alert('Giá trị không hợp lệ!');
+            value = parsed;
+        }
 
         // Validate subtract value nếu đang chọn mode giảm theo đơn vị hoặc lowest
         if (reverseMode && (reverseType === 'subtract' || reverseType === 'lowest') && subtractValueStr !== '') {
@@ -86,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 action: 'setPrice',
                 mode,
                 calcMode,
-                value: parseFloat(value),
+                value: value,
                 amount,
                 total,
                 reverseMode,
