@@ -71,6 +71,16 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                     const subtractNum = parseFloat((request.subtractValue || '0').replace(',', '.'));
                     const reversePrice = priceNum - subtractNum * 1e-8;
                     limitVal = reversePrice.toFixed(8);
+                } else if (request.reverseType === 'lowest') {
+                    // Thấp nhất trong 5 giá gần nhất, có thể trừ thêm N tick (1 tick = 1e-8)
+                    const recent = getLatestPrices(5)
+                        .map(parseFloat)
+                        .filter(n => !isNaN(n));
+                    if (recent.length === 0) {
+                        return sendResponse({ success: false, error: 'Không tìm thấy giá gần nhất' });
+                    }
+                    const subtractNum = parseFloat((request.subtractValue || '0').replace(',', '.')) || 0;
+                    limitVal = (Math.min(...recent) - subtractNum * 1e-8).toFixed(8);
                 } else {
                     // Số thập phân gần nhất (logic cũ)
                     limitVal = shrinkDecimal(adjustedPrice);
@@ -108,19 +118,16 @@ function shrinkDecimal(num) {
 }
 
 // ========================
-// GET LATEST PRICE (BINANCE)
+// GET LATEST PRICE(S) (BINANCE)
 // ========================
-function getLatestPrice() {
-    // Lấy tất cả grid của ReactVirtualized
+function getLatestPrices(n = 1) {
     const grids = document.querySelectorAll('.ReactVirtualized__Grid__innerScrollContainer');
-    if (!grids.length) return null;
+    if (!grids.length) return [];
 
     for (const grid of grids) {
-        // Tìm container bao quanh grid này
         const container = grid.closest('.w-full.h-full');
         if (!container) continue;
 
-        // Tìm hàng header: Thời gian / Giá (USDT) / Số lượng (...)
         const header = container.querySelector(
             '.flex.items-center.justify-between.gap-1.text-TertiaryText'
         );
@@ -133,7 +140,6 @@ function getLatestPrice() {
         const colPrice = cols[1].textContent.trim();
         const colAmount = cols[2].textContent.trim();
 
-        // Kiểm tra đúng panel "Các giao dịch"
         const isTradeHeader =
             colTime.includes('Thời gian') &&
             colPrice.includes('Giá') &&
@@ -142,21 +148,22 @@ function getLatestPrice() {
 
         if (!isTradeHeader) continue;
 
-        // Đến đây thì chắc chắn đây là panel "Các giao dịch" đúng
-        const firstRow = grid.querySelector('div[role="gridcell"]');
-        if (!firstRow) return null;
+        const rows = grid.querySelectorAll('div[role="gridcell"]');
+        if (!rows.length) return [];
 
-        const cells = firstRow.querySelectorAll('div');
-        if (cells.length < 2) return null;
-
-        const rawPrice = cells[1].textContent.trim();
-
-        // Đổi , -> . cho chắc (phòng trường hợp locale khác)
-        const normalized = rawPrice.replace(',', '.');
-
-        return normalized;
+        const prices = [];
+        const limit = Math.min(n, rows.length);
+        for (let i = 0; i < limit; i++) {
+            const cells = rows[i].querySelectorAll('div');
+            if (cells.length < 2) continue;
+            prices.push(cells[1].textContent.trim().replace(',', '.'));
+        }
+        return prices;
     }
 
-    // Nếu không tìm được grid nào khớp header
-    return null;
+    return [];
+}
+
+function getLatestPrice() {
+    return getLatestPrices(1)[0] || null;
 }

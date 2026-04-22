@@ -132,13 +132,14 @@
     </div>
 
     <div class="input-group" id="reverseOptions" style="display:none; margin-left: 18px; margin-top: -4px;">
-        <div class="radio-row">
+        <div class="radio-row" style="flex-direction: column; gap: 2px;">
             <label><input type="radio" name="reverseType" value="shrink" checked> Thập phân gần nhất</label>
             <label><input type="radio" name="reverseType" value="subtract"> Giảm theo đơn vị</label>
+            <label><input type="radio" name="reverseType" value="lowest"> Thấp nhất 5 giá gần nhất</label>
         </div>
         <div id="subtractInputWrap" style="display:none; margin-top: 4px;">
             <input type="text" id="subtractValue" placeholder="VD: 5">
-            <div class="hint">VD: nhập 5 → 0,32099006 thành 0,32099001</div>
+            <div class="hint">Trừ N đơn vị ở thập phân cuối. VD: 5 → 0,12345678 thành 0,12345673</div>
         </div>
     </div>
 
