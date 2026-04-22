@@ -94,16 +94,22 @@
     <h3>Cài Đặt Giá</h3>
 
     <div class="input-group">
-        <label>Chế độ điều chỉnh:</label>
-        <div class="radio-row" style="flex-direction: column; gap: 2px;">
-            <label><input type="radio" name="mode" value="percent" checked> Theo %</label>
-            <label><input type="radio" name="mode" value="fixed"> Theo Fixed</label>
-            <label><input type="radio" name="mode" value="first"> Giá record đầu tiên</label>
-            <label><input type="radio" name="mode" value="highest"> Cao nhất 5 giá gần nhất</label>
+        <label>Nguồn giá gốc:</label>
+        <div class="radio-row" style="flex-wrap: wrap; row-gap: 2px;">
+            <label><input type="radio" name="priceSource" value="first" checked> Record đầu tiên</label>
+            <label><input type="radio" name="priceSource" value="highest"> Cao nhất 5 gần nhất</label>
         </div>
     </div>
 
-    <div class="input-group" id="valueGroup">
+    <div class="input-group">
+        <label>Chế độ điều chỉnh:</label>
+        <div class="radio-row">
+            <label><input type="radio" name="mode" value="percent" checked> Theo %</label>
+            <label><input type="radio" name="mode" value="fixed"> Theo Fixed</label>
+        </div>
+    </div>
+
+    <div class="input-group">
         <label>Giá trị (% hoặc Fixed):</label>
         <input type="text" id="valueInput" placeholder="VD: -5,5 hoặc 10">
         <div class="hint">Fixed: tăng n đơn vị vào phần thập phân cuối</div>

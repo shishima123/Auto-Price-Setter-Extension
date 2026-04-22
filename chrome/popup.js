@@ -6,17 +6,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const reverseModeEl = document.getElementById('reverseMode');
     const reverseOptions = document.getElementById('reverseOptions');
     const subtractInputWrap = document.getElementById('subtractInputWrap');
-    const valueGroup = document.getElementById('valueGroup');
-
-    // Mode cần nhập "value" (percent/fixed) vs mode tự lấy từ record (first/highest)
-    function modeNeedsValue(mode) {
-        return mode === 'percent' || mode === 'fixed';
-    }
-
-    function toggleValueGroup() {
-        const mode = document.querySelector('input[name="mode"]:checked').value;
-        valueGroup.style.display = modeNeedsValue(mode) ? 'block' : 'none';
-    }
 
     // Toggle hiển thị options khi tích/bỏ tích checkbox
     function toggleReverseOptions() {
@@ -34,14 +23,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input[name="reverseType"]').forEach(function (radio) {
         radio.addEventListener('change', toggleSubtractInput);
     });
-    document.querySelectorAll('input[name="mode"]').forEach(function (radio) {
-        radio.addEventListener('change', toggleValueGroup);
-    });
 
-    chrome.storage.local.get(['mode', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'], function (res) {
+    chrome.storage.local.get(['mode', 'priceSource', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'], function (res) {
 
         if (res.mode)
             document.querySelector(`input[name="mode"][value="${res.mode}"]`).checked = true;
+
+        if (res.priceSource)
+            document.querySelector(`input[name="priceSource"][value="${res.priceSource}"]`).checked = true;
 
         if (res.calcMode)
             document.querySelector(`input[name="calcMode"][value="${res.calcMode}"]`).checked = true;
@@ -59,12 +48,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         toggleReverseOptions();
         toggleSubtractInput();
-        toggleValueGroup();
     });
 
     document.getElementById('setPriceBtn').addEventListener('click', function () {
 
         const mode = document.querySelector('input[name="mode"]:checked').value;
+        const priceSource = document.querySelector('input[name="priceSource"]:checked').value;
         const calcMode = document.querySelector('input[name="calcMode"]:checked').value;
 
         const valueStr = document.getElementById('valueInput').value.trim();
@@ -74,14 +63,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
         const subtractValueStr = document.getElementById('subtractValue').value.trim();
 
-        const needsValue = modeNeedsValue(mode);
-        let value = 0;
-        if (needsValue) {
-            if (!valueStr) return alert('Vui lòng nhập giá trị!');
-            const parsed = parseFloat(valueStr.replace(',', '.'));
-            if (isNaN(parsed)) return alert('Giá trị không hợp lệ!');
-            value = parsed;
-        }
+        if (!valueStr) return alert('Vui lòng nhập giá trị!');
+
+        const value = valueStr.replace(',', '.');
+        if (isNaN(parseFloat(value))) return alert('Giá trị không hợp lệ!');
 
         // Validate subtract value nếu đang chọn mode giảm theo đơn vị hoặc lowest
         if (reverseMode && (reverseType === 'subtract' || reverseType === 'lowest') && subtractValueStr !== '') {
@@ -91,6 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         chrome.storage.local.set({
             mode,
+            priceSource,
             calcMode,
             value: valueStr,
             amount,
@@ -104,8 +90,9 @@ document.addEventListener('DOMContentLoaded', function () {
             chrome.tabs.sendMessage(tabs[0].id, {
                 action: 'setPrice',
                 mode,
+                priceSource,
                 calcMode,
-                value: value,
+                value: parseFloat(value),
                 amount,
                 total,
                 reverseMode,
