@@ -38,17 +38,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             const priceNum = parseFloat(currentPrice);
 
             // ========================
-            // BASE PRICE: first (record đầu tiên) | highest (cao nhất 5 gần nhất)
+            // BASE PRICE: first | highest | lowest | average (5 record gần nhất)
             // ========================
             let basePrice = priceNum;
-            if (request.priceSource === 'highest') {
-                const recent = getLatestPrices(5)
-                    .map(parseFloat)
-                    .filter(n => !isNaN(n));
-                if (recent.length === 0) {
+            if (['highest', 'lowest', 'average'].includes(request.priceSource)) {
+                const agg = getAggregateFromRecent(request.priceSource, 5);
+                if (agg === null) {
                     return sendResponse({ success: false, error: 'Không tìm thấy giá gần nhất' });
                 }
-                basePrice = Math.max(...recent);
+                basePrice = agg;
             }
 
             // ========================
@@ -106,24 +104,20 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             // ========================
             if (request.reverseMode) {
                 let limitVal;
+                const subtractNum = parseFloat((request.subtractValue || '0').replace(',', '.')) || 0;
 
                 if (request.reverseType === 'subtract') {
-                    // Giảm theo đơn vị tick: giá hiện tại - n * 1e-8
-                    const subtractNum = parseFloat((request.subtractValue || '0').replace(',', '.'));
-                    const reversePrice = priceNum - subtractNum * 1e-8;
-                    limitVal = reversePrice.toFixed(8);
-                } else if (request.reverseType === 'lowest') {
-                    // Thấp nhất trong 5 giá gần nhất, có thể trừ thêm N tick (1 tick = 1e-8)
-                    const recent = getLatestPrices(5)
-                        .map(parseFloat)
-                        .filter(n => !isNaN(n));
-                    if (recent.length === 0) {
+                    // Giá hiện tại - N tick
+                    limitVal = (priceNum - subtractNum * 1e-8).toFixed(8);
+                } else if (['lowest', 'highest', 'average'].includes(request.reverseType)) {
+                    // Aggregate 5 giá gần nhất, trừ thêm N tick
+                    const agg = getAggregateFromRecent(request.reverseType, 5);
+                    if (agg === null) {
                         return sendResponse({ success: false, error: 'Không tìm thấy giá gần nhất' });
                     }
-                    const subtractNum = parseFloat((request.subtractValue || '0').replace(',', '.')) || 0;
-                    limitVal = (Math.min(...recent) - subtractNum * 1e-8).toFixed(8);
+                    limitVal = (agg - subtractNum * 1e-8).toFixed(8);
                 } else {
-                    // Số thập phân gần nhất (logic cũ)
+                    // shrink: số thập phân gần nhất của adjustedPrice (logic cũ)
                     limitVal = shrinkDecimal(adjustedPrice);
                 }
 
@@ -207,4 +201,14 @@ function getLatestPrices(n = 1) {
 
 function getLatestPrice() {
     return getLatestPrices(1)[0] || null;
+}
+
+// Tính aggregate (highest/lowest/average) từ N giá gần nhất. Trả về null nếu không có giá.
+function getAggregateFromRecent(type, n) {
+    const recent = getLatestPrices(n).map(parseFloat).filter(x => !isNaN(x));
+    if (recent.length === 0) return null;
+    if (type === 'highest') return Math.max(...recent);
+    if (type === 'lowest') return Math.min(...recent);
+    if (type === 'average') return recent.reduce((a, b) => a + b, 0) / recent.length;
+    return null;
 }

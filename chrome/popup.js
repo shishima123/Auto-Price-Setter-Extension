@@ -12,11 +12,11 @@ document.addEventListener('DOMContentLoaded', function () {
         reverseOptions.style.display = reverseModeEl.checked ? 'block' : 'none';
     }
 
-    // Toggle hiển thị input giảm theo đơn vị (dùng cho cả subtract và lowest)
+    // Toggle hiển thị input giảm theo đơn vị (dùng cho subtract / lowest / highest / average)
+    const TYPES_WITH_SUBTRACT = ['subtract', 'lowest', 'highest', 'average'];
     function toggleSubtractInput() {
         const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
-        const needsSubtract = reverseType === 'subtract' || reverseType === 'lowest';
-        subtractInputWrap.style.display = needsSubtract ? 'block' : 'none';
+        subtractInputWrap.style.display = TYPES_WITH_SUBTRACT.includes(reverseType) ? 'block' : 'none';
     }
 
     reverseModeEl.addEventListener('change', toggleReverseOptions);
@@ -68,8 +68,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const value = valueStr.replace(',', '.');
         if (isNaN(parseFloat(value))) return alert('Giá trị không hợp lệ!');
 
-        // Validate subtract value nếu đang chọn mode giảm theo đơn vị hoặc lowest
-        if (reverseMode && (reverseType === 'subtract' || reverseType === 'lowest') && subtractValueStr !== '') {
+        // Validate subtract value nếu reverseType có dùng ô giảm
+        if (reverseMode && TYPES_WITH_SUBTRACT.includes(reverseType) && subtractValueStr !== '') {
             const sv = subtractValueStr.replace(',', '.');
             if (isNaN(parseFloat(sv))) return alert('Giá trị giảm không hợp lệ!');
         }
