@@ -9,7 +9,7 @@ chrome.commands.onCommand.addListener(function (command) {
 
     if (command === 'set-price') {
         chrome.storage.local.get(
-            ['mode', 'priceSource', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'],
+            ['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'],
             function (res) {
                 const valueStr = (res.value || '').trim();
                 if (!valueStr) return;
@@ -23,6 +23,7 @@ chrome.commands.onCommand.addListener(function (command) {
                         action: 'setPrice',
                         mode: res.mode || 'percent',
                         priceSource: res.priceSource || 'first',
+                        manualPrice: res.manualPrice || '',
                         calcMode: res.calcMode || 'amount',
                         value: value,
                         amount: res.amount || '',

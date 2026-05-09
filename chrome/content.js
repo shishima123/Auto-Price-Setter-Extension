@@ -31,22 +31,31 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         try {
 
             const currentPrice = getLatestPrice();
-            if (!currentPrice)
-                return sendResponse({ success: false, error: 'Không tìm thấy giá' });
-
+            const priceNum = currentPrice ? parseFloat(currentPrice) : NaN;
             let adjustedPrice = 0;
-            const priceNum = parseFloat(currentPrice);
 
             // ========================
-            // BASE PRICE: first | highest | lowest | average (5 record gần nhất)
+            // BASE PRICE: first | highest | lowest | average | manual
             // ========================
-            let basePrice = priceNum;
-            if (['highest', 'lowest', 'average'].includes(request.priceSource)) {
+            let basePrice;
+            if (request.priceSource === 'manual') {
+                const mp = parseFloat((request.manualPrice || '').replace(',', '.'));
+                if (isNaN(mp)) {
+                    return sendResponse({ success: false, error: 'Giá nhập tay không hợp lệ' });
+                }
+                basePrice = mp;
+            } else if (['highest', 'lowest', 'average'].includes(request.priceSource)) {
                 const agg = getAggregateFromRecent(request.priceSource, 5);
                 if (agg === null) {
                     return sendResponse({ success: false, error: 'Không tìm thấy giá gần nhất' });
                 }
                 basePrice = agg;
+            } else {
+                // first (record đầu) — cần priceNum từ DOM
+                if (isNaN(priceNum)) {
+                    return sendResponse({ success: false, error: 'Không tìm thấy giá' });
+                }
+                basePrice = priceNum;
             }
 
             // ========================
@@ -107,8 +116,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 const subtractNum = parseFloat((request.subtractValue || '0').replace(',', '.')) || 0;
 
                 if (request.reverseType === 'subtract') {
-                    // Giá hiện tại - N tick
-                    limitVal = (priceNum - subtractNum * 1e-8).toFixed(8);
+                    // Giá hiện tại - N tick (fallback về basePrice nếu không scrape được)
+                    const refPrice = isNaN(priceNum) ? basePrice : priceNum;
+                    limitVal = (refPrice - subtractNum * 1e-8).toFixed(8);
                 } else if (['lowest', 'highest', 'average'].includes(request.reverseType)) {
                     // Aggregate 5 giá gần nhất, trừ thêm N tick
                     const agg = getAggregateFromRecent(request.reverseType, 5);
@@ -130,7 +140,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
             sendResponse({
                 success: true,
-                currentPrice: priceNum.toFixed(8),
+                currentPrice: isNaN(priceNum) ? '--' : priceNum.toFixed(8),
                 adjustedPrice: adjustedPrice.toFixed(8)
             });
 

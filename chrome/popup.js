@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const reverseModeEl = document.getElementById('reverseMode');
     const reverseOptions = document.getElementById('reverseOptions');
     const subtractInputWrap = document.getElementById('subtractInputWrap');
+    const manualPriceWrap = document.getElementById('manualPriceWrap');
 
     // Toggle hiển thị options khi tích/bỏ tích checkbox
     function toggleReverseOptions() {
@@ -19,12 +20,35 @@ document.addEventListener('DOMContentLoaded', function () {
         subtractInputWrap.style.display = TYPES_WITH_SUBTRACT.includes(reverseType) ? 'block' : 'none';
     }
 
+    // Toggle ô nhập tay khi chọn priceSource = manual
+    function toggleManualPriceInput() {
+        const priceSource = document.querySelector('input[name="priceSource"]:checked').value;
+        manualPriceWrap.style.display = priceSource === 'manual' ? 'block' : 'none';
+    }
+
     reverseModeEl.addEventListener('change', toggleReverseOptions);
     document.querySelectorAll('input[name="reverseType"]').forEach(function (radio) {
         radio.addEventListener('change', toggleSubtractInput);
     });
+    document.querySelectorAll('input[name="priceSource"]').forEach(function (radio) {
+        radio.addEventListener('change', toggleManualPriceInput);
+    });
 
-    chrome.storage.local.get(['mode', 'priceSource', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'], function (res) {
+    // Giới hạn manualPrice: chỉ chữ số + 1 dấu phân cách, phần thập phân tối đa 8 số
+    const manualPriceEl = document.getElementById('manualPrice');
+    manualPriceEl.addEventListener('input', function () {
+        let v = manualPriceEl.value.replace(/[^0-9.,]/g, '');
+        const m = v.match(/^(\d*)([.,])?(\d*)/);
+        if (m) {
+            const intPart = m[1];
+            const sep = m[2] || '';
+            const decPart = (m[3] || '').slice(0, 8);
+            v = intPart + sep + decPart;
+        }
+        if (v !== manualPriceEl.value) manualPriceEl.value = v;
+    });
+
+    chrome.storage.local.get(['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'], function (res) {
 
         if (res.mode)
             document.querySelector(`input[name="mode"][value="${res.mode}"]`).checked = true;
@@ -46,8 +70,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (res.subtractValue) document.getElementById('subtractValue').value = res.subtractValue;
 
+        if (res.manualPrice) document.getElementById('manualPrice').value = res.manualPrice;
+
         toggleReverseOptions();
         toggleSubtractInput();
+        toggleManualPriceInput();
     });
 
     document.getElementById('setPriceBtn').addEventListener('click', function () {
@@ -62,11 +89,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const reverseMode = reverseModeEl.checked;
         const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
         const subtractValueStr = document.getElementById('subtractValue').value.trim();
+        const manualPriceStr = document.getElementById('manualPrice').value.trim();
 
         if (!valueStr) return alert('Vui lòng nhập giá trị!');
 
         const value = valueStr.replace(',', '.');
         if (isNaN(parseFloat(value))) return alert('Giá trị không hợp lệ!');
+
+        // Validate manual price khi chọn nguồn giá = manual
+        if (priceSource === 'manual') {
+            if (!manualPriceStr) return alert('Vui lòng nhập giá tay!');
+            const mp = manualPriceStr.replace(',', '.');
+            if (isNaN(parseFloat(mp))) return alert('Giá nhập tay không hợp lệ!');
+        }
 
         // Validate subtract value nếu reverseType có dùng ô giảm
         if (reverseMode && TYPES_WITH_SUBTRACT.includes(reverseType) && subtractValueStr !== '') {
@@ -77,6 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chrome.storage.local.set({
             mode,
             priceSource,
+            manualPrice: manualPriceStr,
             calcMode,
             value: valueStr,
             amount,
@@ -91,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 action: 'setPrice',
                 mode,
                 priceSource,
+                manualPrice: manualPriceStr,
                 calcMode,
                 value: parseFloat(value),
                 amount,
