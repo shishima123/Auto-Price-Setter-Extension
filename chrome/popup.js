@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const subtractInputWrap = document.getElementById('subtractInputWrap');
     const manualPriceWrap = document.getElementById('manualPriceWrap');
 
+    const presetSelect = document.getElementById('presetSelect');
+    const savePresetBtn = document.getElementById('savePresetBtn');
+    const deletePresetBtn = document.getElementById('deletePresetBtn');
+
     // Toggle hiển thị options khi tích/bỏ tích checkbox
     function toggleReverseOptions() {
         reverseOptions.style.display = reverseModeEl.checked ? 'block' : 'none';
@@ -48,7 +52,104 @@ document.addEventListener('DOMContentLoaded', function () {
         if (v !== manualPriceEl.value) manualPriceEl.value = v;
     });
 
-    chrome.storage.local.get(['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'], function (res) {
+    function readForm() {
+        return {
+            mode: document.querySelector('input[name="mode"]:checked').value,
+            priceSource: document.querySelector('input[name="priceSource"]:checked').value,
+            manualPrice: document.getElementById('manualPrice').value.trim(),
+            calcMode: document.querySelector('input[name="calcMode"]:checked').value,
+            value: document.getElementById('valueInput').value.trim(),
+            amount: document.getElementById('amountInput').value.trim(),
+            total: document.getElementById('totalInput').value.trim(),
+            reverseMode: reverseModeEl.checked,
+            reverseType: document.querySelector('input[name="reverseType"]:checked').value,
+            subtractValue: document.getElementById('subtractValue').value.trim()
+        };
+    }
+
+    function applyForm(data) {
+        if (data.mode)
+            document.querySelector(`input[name="mode"][value="${data.mode}"]`).checked = true;
+        if (data.priceSource)
+            document.querySelector(`input[name="priceSource"][value="${data.priceSource}"]`).checked = true;
+        if (data.calcMode)
+            document.querySelector(`input[name="calcMode"][value="${data.calcMode}"]`).checked = true;
+        if (data.reverseType)
+            document.querySelector(`input[name="reverseType"][value="${data.reverseType}"]`).checked = true;
+
+        document.getElementById('valueInput').value = data.value || '';
+        document.getElementById('amountInput').value = data.amount || '';
+        document.getElementById('totalInput').value = data.total || '';
+        document.getElementById('manualPrice').value = data.manualPrice || '';
+        document.getElementById('subtractValue').value = data.subtractValue || '';
+        reverseModeEl.checked = !!data.reverseMode;
+
+        toggleReverseOptions();
+        toggleSubtractInput();
+        toggleManualPriceInput();
+    }
+
+    function refreshPresetSelect(presets, current) {
+        presetSelect.innerHTML = '<option value="">-- Chọn preset --</option>';
+        Object.keys(presets).sort().forEach(function (name) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            if (name === current) opt.selected = true;
+            presetSelect.appendChild(opt);
+        });
+    }
+
+    presetSelect.addEventListener('change', function () {
+        const name = presetSelect.value;
+        if (!name) {
+            chrome.storage.local.set({ currentPreset: '' });
+            return;
+        }
+        chrome.storage.local.get(['presets'], function (res) {
+            const presets = res.presets || {};
+            const data = presets[name];
+            if (!data) return;
+            applyForm(data);
+            chrome.storage.local.set(Object.assign({}, data, { currentPreset: name }));
+        });
+    });
+
+    savePresetBtn.addEventListener('click', function () {
+        const currentName = presetSelect.value;
+        const input = prompt('Tên preset:', currentName);
+        if (input === null) return;
+        const name = input.trim();
+        if (!name) return alert('Tên preset không được để trống!');
+
+        chrome.storage.local.get(['presets'], function (res) {
+            const presets = res.presets || {};
+            if (presets[name] && name !== currentName) {
+                if (!confirm(`Preset "${name}" đã tồn tại. Ghi đè?`)) return;
+            }
+            const data = readForm();
+            presets[name] = data;
+            chrome.storage.local.set(Object.assign({}, data, { presets: presets, currentPreset: name }), function () {
+                refreshPresetSelect(presets, name);
+            });
+        });
+    });
+
+    deletePresetBtn.addEventListener('click', function () {
+        const name = presetSelect.value;
+        if (!name) return alert('Chưa chọn preset để xóa!');
+        if (!confirm(`Xóa preset "${name}"?`)) return;
+
+        chrome.storage.local.get(['presets'], function (res) {
+            const presets = res.presets || {};
+            delete presets[name];
+            chrome.storage.local.set({ presets: presets, currentPreset: '' }, function () {
+                refreshPresetSelect(presets, '');
+            });
+        });
+    });
+
+    chrome.storage.local.get(['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue', 'presets', 'currentPreset'], function (res) {
 
         if (res.mode)
             document.querySelector(`input[name="mode"][value="${res.mode}"]`).checked = true;
@@ -71,6 +172,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (res.subtractValue) document.getElementById('subtractValue').value = res.subtractValue;
 
         if (res.manualPrice) document.getElementById('manualPrice').value = res.manualPrice;
+
+        refreshPresetSelect(res.presets || {}, res.currentPreset || '');
 
         toggleReverseOptions();
         toggleSubtractInput();
