@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const presetSelect = document.getElementById('presetSelect');
     const savePresetBtn = document.getElementById('savePresetBtn');
     const deletePresetBtn = document.getElementById('deletePresetBtn');
+    const presetStatusEl = document.getElementById('presetStatus');
+
+    // Cache presets in memory để so khớp realtime mà không cần await storage mỗi lần input
+    let presetsCache = {};
 
     // Toggle hiển thị options khi tích/bỏ tích checkbox
     function toggleReverseOptions() {
@@ -67,6 +71,44 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
+    // Chuẩn hóa để so sánh — string rỗng và undefined coi như giống nhau, boolean ép thật/giả.
+    function normForm(f) {
+        return JSON.stringify({
+            mode: f.mode || '',
+            priceSource: f.priceSource || '',
+            manualPrice: f.manualPrice || '',
+            calcMode: f.calcMode || '',
+            value: f.value || '',
+            amount: f.amount || '',
+            total: f.total || '',
+            reverseMode: !!f.reverseMode,
+            reverseType: f.reverseType || '',
+            subtractValue: f.subtractValue || ''
+        });
+    }
+
+    function findMatchingPreset(form, presets) {
+        const a = normForm(form);
+        for (const name of Object.keys(presets)) {
+            if (normForm(presets[name]) === a) return name;
+        }
+        return '';
+    }
+
+    function updatePresetStatus() {
+        const matchName = findMatchingPreset(readForm(), presetsCache);
+        presetSelect.value = matchName;
+        if (matchName) {
+            presetStatusEl.textContent = matchName;
+            presetStatusEl.className = 'preset-status preset-status-loaded';
+        } else {
+            presetStatusEl.textContent = 'Tự chỉnh';
+            presetStatusEl.className = 'preset-status preset-status-custom';
+        }
+        // Sync currentPreset vào storage để Alt+S và lần khởi động sau biết đang ở preset nào
+        chrome.storage.local.set({ currentPreset: matchName });
+    }
+
     function applyForm(data) {
         if (data.mode)
             document.querySelector(`input[name="mode"][value="${data.mode}"]`).checked = true;
@@ -103,16 +145,14 @@ document.addEventListener('DOMContentLoaded', function () {
     presetSelect.addEventListener('change', function () {
         const name = presetSelect.value;
         if (!name) {
-            chrome.storage.local.set({ currentPreset: '' });
+            updatePresetStatus();
             return;
         }
-        chrome.storage.local.get(['presets'], function (res) {
-            const presets = res.presets || {};
-            const data = presets[name];
-            if (!data) return;
-            applyForm(data);
-            chrome.storage.local.set(Object.assign({}, data, { currentPreset: name }));
-        });
+        const data = presetsCache[name];
+        if (!data) return;
+        applyForm(data);
+        chrome.storage.local.set(Object.assign({}, data, { currentPreset: name }));
+        updatePresetStatus();
     });
 
     savePresetBtn.addEventListener('click', function () {
@@ -122,16 +162,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const name = input.trim();
         if (!name) return alert('Tên preset không được để trống!');
 
-        chrome.storage.local.get(['presets'], function (res) {
-            const presets = res.presets || {};
-            if (presets[name] && name !== currentName) {
-                if (!confirm(`Preset "${name}" đã tồn tại. Ghi đè?`)) return;
-            }
-            const data = readForm();
-            presets[name] = data;
-            chrome.storage.local.set(Object.assign({}, data, { presets: presets, currentPreset: name }), function () {
-                refreshPresetSelect(presets, name);
-            });
+        if (presetsCache[name] && name !== currentName) {
+            if (!confirm(`Preset "${name}" đã tồn tại. Ghi đè?`)) return;
+        }
+        const data = readForm();
+        presetsCache[name] = data;
+        chrome.storage.local.set(Object.assign({}, data, { presets: presetsCache, currentPreset: name }), function () {
+            refreshPresetSelect(presetsCache, name);
+            updatePresetStatus();
         });
     });
 
@@ -140,44 +178,33 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!name) return alert('Chưa chọn preset để xóa!');
         if (!confirm(`Xóa preset "${name}"?`)) return;
 
-        chrome.storage.local.get(['presets'], function (res) {
-            const presets = res.presets || {};
-            delete presets[name];
-            chrome.storage.local.set({ presets: presets, currentPreset: '' }, function () {
-                refreshPresetSelect(presets, '');
-            });
+        delete presetsCache[name];
+        chrome.storage.local.set({ presets: presetsCache, currentPreset: '' }, function () {
+            refreshPresetSelect(presetsCache, '');
+            updatePresetStatus();
         });
+    });
+
+    // Bất kỳ thay đổi nào trên form đều phải re-check xem có còn match preset không
+    document.querySelectorAll('input').forEach(function (el) {
+        el.addEventListener('input', updatePresetStatus);
+        el.addEventListener('change', updatePresetStatus);
     });
 
     chrome.storage.local.get(['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue', 'presets', 'currentPreset'], function (res) {
 
-        if (res.mode)
-            document.querySelector(`input[name="mode"][value="${res.mode}"]`).checked = true;
+        presetsCache = res.presets || {};
 
-        if (res.priceSource)
-            document.querySelector(`input[name="priceSource"][value="${res.priceSource}"]`).checked = true;
+        // Nếu có preset đang chọn và preset đó tồn tại → load preset luôn (ưu tiên preset hơn top-level keys cũ)
+        const lastPreset = res.currentPreset || '';
+        if (lastPreset && presetsCache[lastPreset]) {
+            applyForm(presetsCache[lastPreset]);
+        } else {
+            applyForm(res);
+        }
 
-        if (res.calcMode)
-            document.querySelector(`input[name="calcMode"][value="${res.calcMode}"]`).checked = true;
-
-        if (res.value) document.getElementById('valueInput').value = res.value;
-        if (res.amount) document.getElementById('amountInput').value = res.amount;
-        if (res.total) document.getElementById('totalInput').value = res.total;
-
-        if (res.reverseMode) reverseModeEl.checked = true;
-
-        if (res.reverseType)
-            document.querySelector(`input[name="reverseType"][value="${res.reverseType}"]`).checked = true;
-
-        if (res.subtractValue) document.getElementById('subtractValue').value = res.subtractValue;
-
-        if (res.manualPrice) document.getElementById('manualPrice').value = res.manualPrice;
-
-        refreshPresetSelect(res.presets || {}, res.currentPreset || '');
-
-        toggleReverseOptions();
-        toggleSubtractInput();
-        toggleManualPriceInput();
+        refreshPresetSelect(presetsCache, lastPreset);
+        updatePresetStatus();
     });
 
     document.getElementById('setPriceBtn').addEventListener('click', function () {
@@ -212,6 +239,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isNaN(parseFloat(sv))) return alert('Giá trị giảm không hợp lệ!');
         }
 
+        const formSnapshot = readForm();
+        const matchName = findMatchingPreset(formSnapshot, presetsCache);
         chrome.storage.local.set({
             mode,
             priceSource,
@@ -222,7 +251,8 @@ document.addEventListener('DOMContentLoaded', function () {
             total,
             reverseMode,
             reverseType,
-            subtractValue: subtractValueStr
+            subtractValue: subtractValueStr,
+            currentPreset: matchName
         });
 
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {

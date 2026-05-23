@@ -111,6 +111,24 @@
             background-color: #f5f5f5;
         }
 
+        .preset-status {
+            font-weight: normal;
+            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-left: 4px;
+        }
+
+        .preset-status-loaded {
+            color: #0a7d3a;
+            background-color: #d6f5e3;
+        }
+
+        .preset-status-custom {
+            color: #8a6d00;
+            background-color: #fff3cd;
+        }
+
         .info {
             margin-top: 6px;
             border-radius: 4px;
@@ -138,7 +156,7 @@
     <h3>Cài Đặt Giá</h3>
 
     <div class="input-group">
-        <label>Preset:</label>
+        <label>Preset: <span id="presetStatus" class="preset-status preset-status-custom">Tự chỉnh</span></label>
         <select id="presetSelect">
             <option value="">-- Chọn preset --</option>
         </select>
