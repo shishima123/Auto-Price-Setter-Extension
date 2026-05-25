@@ -164,6 +164,11 @@
             <button type="button" class="btn-secondary" id="savePresetBtn">Lưu preset</button>
             <button type="button" class="btn-secondary" id="deletePresetBtn">Xóa</button>
         </div>
+        <div class="preset-actions" id="presetIO" style="margin-top:4px;">
+            <button type="button" class="btn-secondary" id="exportPresetsBtn">Xuất file</button>
+            <button type="button" class="btn-secondary" id="importPresetsBtn">Nhập file</button>
+        </div>
+        <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;">
         <div id="savePresetForm" style="display:none; margin-top:4px;">
             <select id="savePresetTarget">
                 <option value="__new__">+ Tạo preset mới</option>

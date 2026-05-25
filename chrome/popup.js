@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const confirmSaveBtn = document.getElementById('confirmSaveBtn');
     const cancelSaveBtn = document.getElementById('cancelSaveBtn');
 
+    const exportPresetsBtn = document.getElementById('exportPresetsBtn');
+    const importPresetsBtn = document.getElementById('importPresetsBtn');
+    const importFileInput = document.getElementById('importFileInput');
+
     const filterNoiseEl = document.getElementById('filterNoise');
     const filterNoiseWrap = document.getElementById('filterNoiseWrap');
     const filterNoiseInputs = document.getElementById('filterNoiseInputs');
@@ -270,6 +274,85 @@ document.addEventListener('DOMContentLoaded', function () {
             refreshPresetSelect(presetsCache, '');
             updatePresetStatus();
         });
+    });
+
+    exportPresetsBtn.addEventListener('click', function () {
+        const names = Object.keys(presetsCache);
+        if (names.length === 0) return alert('Chưa có preset nào để xuất!');
+
+        const json = JSON.stringify(presetsCache, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const date = new Date().toISOString().slice(0, 10);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `presets-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    importPresetsBtn.addEventListener('click', function () {
+        importFileInput.click();
+    });
+
+    importFileInput.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+            let data;
+            try {
+                data = JSON.parse(reader.result);
+            } catch (err) {
+                alert('File không hợp lệ (không parse được JSON): ' + err.message);
+                importFileInput.value = '';
+                return;
+            }
+            if (!data || typeof data !== 'object' || Array.isArray(data)) {
+                alert('File không hợp lệ (phải là object preset)!');
+                importFileInput.value = '';
+                return;
+            }
+
+            // Lọc bỏ entry không phải object (sanity check)
+            const incoming = {};
+            for (const name of Object.keys(data)) {
+                if (data[name] && typeof data[name] === 'object' && !Array.isArray(data[name])) {
+                    incoming[name] = data[name];
+                }
+            }
+            const incomingNames = Object.keys(incoming);
+            if (incomingNames.length === 0) {
+                alert('File không có preset hợp lệ!');
+                importFileInput.value = '';
+                return;
+            }
+
+            // Kiểm tra trùng tên
+            const conflicts = incomingNames.filter(n => presetsCache.hasOwnProperty(n));
+            if (conflicts.length > 0) {
+                const msg = `Có ${conflicts.length} preset trùng tên sẽ bị ghi đè:\n\n${conflicts.join(', ')}\n\nTiếp tục?`;
+                if (!confirm(msg)) {
+                    importFileInput.value = '';
+                    return;
+                }
+            }
+
+            presetsCache = Object.assign({}, presetsCache, incoming);
+            chrome.storage.local.set({ presets: presetsCache }, function () {
+                refreshPresetSelect(presetsCache, presetSelect.value);
+                updatePresetStatus();
+                alert(`Đã nhập ${incomingNames.length} preset (${conflicts.length} ghi đè).`);
+                importFileInput.value = '';
+            });
+        };
+        reader.onerror = function () {
+            alert('Không đọc được file!');
+            importFileInput.value = '';
+        };
+        reader.readAsText(file);
     });
 
     // Bất kỳ thay đổi nào trên form đều phải re-check xem có còn match preset không
