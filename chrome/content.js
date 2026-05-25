@@ -146,7 +146,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
             sendResponse({
                 success: true,
-                currentPrice: isNaN(priceNum) ? '--' : priceNum.toFixed(8),
+                currentPrice: basePrice.toFixed(8),
                 adjustedPrice: adjustedPrice.toFixed(8)
             });
 
