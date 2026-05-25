@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const savePresetBtn = document.getElementById('savePresetBtn');
     const deletePresetBtn = document.getElementById('deletePresetBtn');
     const presetStatusEl = document.getElementById('presetStatus');
+    const presetActions = document.getElementById('presetActions');
+    const savePresetForm = document.getElementById('savePresetForm');
+    const savePresetTarget = document.getElementById('savePresetTarget');
+    const newPresetNameInput = document.getElementById('newPresetName');
+    const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+    const cancelSaveBtn = document.getElementById('cancelSaveBtn');
 
     // Cache presets in memory để so khớp realtime mà không cần await storage mỗi lần input
     let presetsCache = {};
@@ -155,21 +161,62 @@ document.addEventListener('DOMContentLoaded', function () {
         updatePresetStatus();
     });
 
-    savePresetBtn.addEventListener('click', function () {
-        const currentName = presetSelect.value;
-        const input = prompt('Tên preset:', currentName);
-        if (input === null) return;
-        const name = input.trim();
-        if (!name) return alert('Tên preset không được để trống!');
+    function populateSaveTarget() {
+        savePresetTarget.innerHTML = '<option value="__new__">+ Tạo preset mới</option>';
+        Object.keys(presetsCache).sort().forEach(function (name) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = `Ghi đè: ${name}`;
+            savePresetTarget.appendChild(opt);
+        });
+        // Mặc định: nếu form đang khớp preset thì pick preset đó, không thì "Tạo mới"
+        const current = presetSelect.value;
+        savePresetTarget.value = (current && presetsCache[current]) ? current : '__new__';
+        toggleNewNameInput();
+    }
 
-        if (presetsCache[name] && name !== currentName) {
-            if (!confirm(`Preset "${name}" đã tồn tại. Ghi đè?`)) return;
+    function toggleNewNameInput() {
+        const isNew = savePresetTarget.value === '__new__';
+        newPresetNameInput.style.display = isNew ? 'block' : 'none';
+        if (isNew) newPresetNameInput.focus();
+    }
+
+    function showSaveForm() {
+        populateSaveTarget();
+        presetActions.style.display = 'none';
+        savePresetForm.style.display = 'block';
+    }
+
+    function hideSaveForm() {
+        savePresetForm.style.display = 'none';
+        presetActions.style.display = 'flex';
+        newPresetNameInput.value = '';
+    }
+
+    savePresetBtn.addEventListener('click', showSaveForm);
+    cancelSaveBtn.addEventListener('click', hideSaveForm);
+    savePresetTarget.addEventListener('change', toggleNewNameInput);
+
+    confirmSaveBtn.addEventListener('click', function () {
+        const target = savePresetTarget.value;
+        let name;
+        if (target === '__new__') {
+            name = newPresetNameInput.value.trim();
+            if (!name) return alert('Tên preset không được để trống!');
+            if (presetsCache[name]) {
+                if (!confirm(`Preset "${name}" đã tồn tại. Ghi đè?`)) return;
+            }
+        } else {
+            name = target;
+            if (!confirm(`Ghi đè preset "${name}"?`)) return;
         }
+
         const data = readForm();
         presetsCache[name] = data;
         chrome.storage.local.set(Object.assign({}, data, { presets: presetsCache, currentPreset: name }), function () {
             refreshPresetSelect(presetsCache, name);
             updatePresetStatus();
+            hideSaveForm();
         });
     });
 
@@ -187,6 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Bất kỳ thay đổi nào trên form đều phải re-check xem có còn match preset không
     document.querySelectorAll('input').forEach(function (el) {
+        if (el.id === 'newPresetName') return;
         el.addEventListener('input', updatePresetStatus);
         el.addEventListener('change', updatePresetStatus);
     });

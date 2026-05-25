@@ -160,9 +160,19 @@
         <select id="presetSelect">
             <option value="">-- Chọn preset --</option>
         </select>
-        <div class="preset-actions">
+        <div class="preset-actions" id="presetActions">
             <button type="button" class="btn-secondary" id="savePresetBtn">Lưu preset</button>
             <button type="button" class="btn-secondary" id="deletePresetBtn">Xóa</button>
+        </div>
+        <div id="savePresetForm" style="display:none; margin-top:4px;">
+            <select id="savePresetTarget">
+                <option value="__new__">+ Tạo preset mới</option>
+            </select>
+            <input type="text" id="newPresetName" placeholder="Tên preset mới" style="margin-top:4px; display:none;">
+            <div class="preset-actions">
+                <button type="button" class="btn-secondary" id="confirmSaveBtn">Lưu</button>
+                <button type="button" class="btn-secondary" id="cancelSaveBtn">Hủy</button>
+            </div>
         </div>
     </div>
 
