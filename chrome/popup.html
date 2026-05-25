@@ -5,12 +5,23 @@
     <meta charset="UTF-8">
     <style>
         body {
-            width: 300px;
+            width: 620px;
             padding: 10px 12px;
             font-family: Arial, sans-serif;
             font-size: 13px;
             margin: 0;
             background-color: #eaecef86;
+        }
+
+        .form-grid {
+            column-count: 2;
+            column-gap: 14px;
+        }
+
+        .form-grid .input-group {
+            break-inside: avoid;
+            -webkit-column-break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         h3 {
@@ -155,6 +166,8 @@
 
     <h3>Cài Đặt Giá</h3>
 
+    <div class="form-grid">
+
     <div class="input-group">
         <label>Preset: <span id="presetStatus" class="preset-status preset-status-custom">Tự chỉnh</span></label>
         <select id="presetSelect">
@@ -263,6 +276,8 @@
             <div class="hint">Trừ N đơn vị ở thập phân cuối. VD: 5 → 0,12345678 → 0,12345673</div>
         </div>
     </div>
+
+    </div><!-- /.form-grid -->
 
     <button id="setPriceBtn">Set Giá</button>
 
