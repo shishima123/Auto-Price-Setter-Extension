@@ -191,6 +191,23 @@
         </div>
     </div>
 
+    <div class="input-group" id="filterNoiseWrap" style="display:none;">
+        <label style="font-weight:normal;">
+            <input type="checkbox" id="filterNoise"> Lọc nhiễu (loại giá cực cao/cực thấp)
+        </label>
+        <div id="filterNoiseInputs" style="display:none; margin-top:4px;" class="two-col">
+            <div class="col">
+                <label style="font-size:11px;">Lấy N giá:</label>
+                <input type="text" id="filterSampleSize" placeholder="10" inputmode="numeric">
+            </div>
+            <div class="col">
+                <label style="font-size:11px;">Ngưỡng nhiễu (%):</label>
+                <input type="text" id="filterThreshold" placeholder="5" inputmode="decimal">
+            </div>
+        </div>
+        <div class="hint" id="filterNoiseHint" style="display:none;">Lấy N giá gần nhất, bỏ giá lệch &gt; X% so với median, rồi tính aggregate trên phần còn lại</div>
+    </div>
+
     <div class="input-group">
         <label>Chế độ điều chỉnh:</label>
         <div class="radio-row">

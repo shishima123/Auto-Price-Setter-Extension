@@ -34,6 +34,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             const priceNum = currentPrice ? parseFloat(currentPrice) : NaN;
             let adjustedPrice = 0;
 
+            const filterOpts = {
+                enabled: !!request.filterNoise,
+                sampleSize: request.filterSampleSize,
+                thresholdPct: request.filterThreshold
+            };
+
             // ========================
             // BASE PRICE: first | highest | lowest | average | manual
             // ========================
@@ -45,7 +51,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 }
                 basePrice = mp;
             } else if (['highest', 'lowest', 'average'].includes(request.priceSource)) {
-                const agg = getAggregateFromRecent(request.priceSource, 5);
+                const agg = getAggregateFromRecent(request.priceSource, 5, filterOpts);
                 if (agg === null) {
                     return sendResponse({ success: false, error: 'Không tìm thấy giá gần nhất' });
                 }
@@ -121,7 +127,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                     limitVal = (refPrice - subtractNum * 1e-8).toFixed(8);
                 } else if (['lowest', 'highest', 'average'].includes(request.reverseType)) {
                     // Aggregate 5 giá gần nhất, trừ thêm N tick
-                    const agg = getAggregateFromRecent(request.reverseType, 5);
+                    const agg = getAggregateFromRecent(request.reverseType, 5, filterOpts);
                     if (agg === null) {
                         return sendResponse({ success: false, error: 'Không tìm thấy giá gần nhất' });
                     }
@@ -214,11 +220,36 @@ function getLatestPrice() {
 }
 
 // Tính aggregate (highest/lowest/average) từ N giá gần nhất. Trả về null nếu không có giá.
-function getAggregateFromRecent(type, n) {
-    const recent = getLatestPrices(n).map(parseFloat).filter(x => !isNaN(x));
+// filterOpts: { enabled, sampleSize, thresholdPct } — nếu enabled, lấy sampleSize giá thay vì n,
+// rồi bỏ những giá lệch hơn thresholdPct% so với median trước khi tính.
+function getAggregateFromRecent(type, n, filterOpts) {
+    let sampleSize = n;
+    let thresholdPct = null;
+    if (filterOpts && filterOpts.enabled) {
+        const ns = parseInt(filterOpts.sampleSize, 10);
+        const tp = parseFloat(String(filterOpts.thresholdPct || '').replace(',', '.'));
+        if (!isNaN(ns) && ns >= 1) sampleSize = ns;
+        if (!isNaN(tp) && tp >= 0) thresholdPct = tp;
+    }
+
+    const recent = getLatestPrices(sampleSize).map(parseFloat).filter(x => !isNaN(x));
     if (recent.length === 0) return null;
-    if (type === 'highest') return Math.max(...recent);
-    if (type === 'lowest') return Math.min(...recent);
-    if (type === 'average') return recent.reduce((a, b) => a + b, 0) / recent.length;
+
+    let cleaned = recent;
+    if (thresholdPct !== null) {
+        const sorted = recent.slice().sort((a, b) => a - b);
+        const mid = sorted.length / 2;
+        const median = sorted.length % 2 ? sorted[Math.floor(mid)] : (sorted[mid - 1] + sorted[mid]) / 2;
+        if (median !== 0) {
+            const limit = thresholdPct / 100;
+            const filtered = recent.filter(p => Math.abs(p - median) / Math.abs(median) <= limit);
+            // Fallback: nếu filter loại sạch tất cả thì dùng lại danh sách gốc để không return null
+            if (filtered.length > 0) cleaned = filtered;
+        }
+    }
+
+    if (type === 'highest') return Math.max(...cleaned);
+    if (type === 'lowest') return Math.min(...cleaned);
+    if (type === 'average') return cleaned.reduce((a, b) => a + b, 0) / cleaned.length;
     return null;
 }

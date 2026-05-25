@@ -9,7 +9,7 @@ chrome.commands.onCommand.addListener(function (command) {
 
     if (command === 'set-price') {
         chrome.storage.local.get(
-            ['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue'],
+            ['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue', 'filterNoise', 'filterSampleSize', 'filterThreshold'],
             function (res) {
                 const valueStr = (res.value || '').trim();
                 if (!valueStr) return;
@@ -30,7 +30,10 @@ chrome.commands.onCommand.addListener(function (command) {
                         total: res.total || '',
                         reverseMode: res.reverseMode || false,
                         reverseType: res.reverseType || 'shrink',
-                        subtractValue: res.subtractValue || ''
+                        subtractValue: res.subtractValue || '',
+                        filterNoise: res.filterNoise || false,
+                        filterSampleSize: res.filterSampleSize || '',
+                        filterThreshold: res.filterThreshold || ''
                     });
                 });
             }

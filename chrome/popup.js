@@ -19,6 +19,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const confirmSaveBtn = document.getElementById('confirmSaveBtn');
     const cancelSaveBtn = document.getElementById('cancelSaveBtn');
 
+    const filterNoiseEl = document.getElementById('filterNoise');
+    const filterNoiseWrap = document.getElementById('filterNoiseWrap');
+    const filterNoiseInputs = document.getElementById('filterNoiseInputs');
+    const filterNoiseHint = document.getElementById('filterNoiseHint');
+    const filterSampleSizeEl = document.getElementById('filterSampleSize');
+    const filterThresholdEl = document.getElementById('filterThreshold');
+
+    const AGGREGATE_TYPES = ['highest', 'lowest', 'average'];
+
     // Cache presets in memory để so khớp realtime mà không cần await storage mỗi lần input
     let presetsCache = {};
 
@@ -40,12 +49,32 @@ document.addEventListener('DOMContentLoaded', function () {
         manualPriceWrap.style.display = priceSource === 'manual' ? 'block' : 'none';
     }
 
+    // Toggle khu vực lọc nhiễu — chỉ hiện khi có dùng aggregate (highest/lowest/average) ở priceSource hoặc reverseType
+    function toggleFilterNoiseWrap() {
+        const priceSource = document.querySelector('input[name="priceSource"]:checked').value;
+        const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
+        const needFilter = AGGREGATE_TYPES.includes(priceSource)
+            || (reverseModeEl.checked && AGGREGATE_TYPES.includes(reverseType));
+        filterNoiseWrap.style.display = needFilter ? 'block' : 'none';
+        toggleFilterNoiseInputs();
+    }
+
+    function toggleFilterNoiseInputs() {
+        const show = filterNoiseEl.checked;
+        filterNoiseInputs.style.display = show ? 'flex' : 'none';
+        filterNoiseHint.style.display = show ? 'block' : 'none';
+    }
+
     reverseModeEl.addEventListener('change', toggleReverseOptions);
+    reverseModeEl.addEventListener('change', toggleFilterNoiseWrap);
+    filterNoiseEl.addEventListener('change', toggleFilterNoiseInputs);
     document.querySelectorAll('input[name="reverseType"]').forEach(function (radio) {
         radio.addEventListener('change', toggleSubtractInput);
+        radio.addEventListener('change', toggleFilterNoiseWrap);
     });
     document.querySelectorAll('input[name="priceSource"]').forEach(function (radio) {
         radio.addEventListener('change', toggleManualPriceInput);
+        radio.addEventListener('change', toggleFilterNoiseWrap);
     });
 
     // Giới hạn manualPrice: chỉ chữ số + 1 dấu phân cách, phần thập phân tối đa 8 số
@@ -73,7 +102,10 @@ document.addEventListener('DOMContentLoaded', function () {
             total: document.getElementById('totalInput').value.trim(),
             reverseMode: reverseModeEl.checked,
             reverseType: document.querySelector('input[name="reverseType"]:checked').value,
-            subtractValue: document.getElementById('subtractValue').value.trim()
+            subtractValue: document.getElementById('subtractValue').value.trim(),
+            filterNoise: filterNoiseEl.checked,
+            filterSampleSize: filterSampleSizeEl.value.trim(),
+            filterThreshold: filterThresholdEl.value.trim()
         };
     }
 
@@ -89,7 +121,10 @@ document.addEventListener('DOMContentLoaded', function () {
             total: f.total || '',
             reverseMode: !!f.reverseMode,
             reverseType: f.reverseType || '',
-            subtractValue: f.subtractValue || ''
+            subtractValue: f.subtractValue || '',
+            filterNoise: !!f.filterNoise,
+            filterSampleSize: f.filterSampleSize || '',
+            filterThreshold: f.filterThreshold || ''
         });
     }
 
@@ -132,9 +167,14 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('subtractValue').value = data.subtractValue || '';
         reverseModeEl.checked = !!data.reverseMode;
 
+        filterNoiseEl.checked = !!data.filterNoise;
+        filterSampleSizeEl.value = data.filterSampleSize || '';
+        filterThresholdEl.value = data.filterThreshold || '';
+
         toggleReverseOptions();
         toggleSubtractInput();
         toggleManualPriceInput();
+        toggleFilterNoiseWrap();
     }
 
     function refreshPresetSelect(presets, current) {
@@ -239,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function () {
         el.addEventListener('change', updatePresetStatus);
     });
 
-    chrome.storage.local.get(['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue', 'presets', 'currentPreset'], function (res) {
+    chrome.storage.local.get(['mode', 'priceSource', 'manualPrice', 'calcMode', 'value', 'amount', 'total', 'reverseMode', 'reverseType', 'subtractValue', 'filterNoise', 'filterSampleSize', 'filterThreshold', 'presets', 'currentPreset'], function (res) {
 
         presetsCache = res.presets || {};
 
@@ -268,6 +308,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const reverseType = document.querySelector('input[name="reverseType"]:checked').value;
         const subtractValueStr = document.getElementById('subtractValue').value.trim();
         const manualPriceStr = document.getElementById('manualPrice').value.trim();
+        const filterNoise = filterNoiseEl.checked;
+        const filterSampleSizeStr = filterSampleSizeEl.value.trim();
+        const filterThresholdStr = filterThresholdEl.value.trim();
 
         if (!valueStr) return alert('Vui lòng nhập giá trị!');
 
@@ -287,6 +330,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isNaN(parseFloat(sv))) return alert('Giá trị giảm không hợp lệ!');
         }
 
+        // Validate filter noise
+        if (filterNoise) {
+            const n = parseInt(filterSampleSizeStr, 10);
+            const t = parseFloat(filterThresholdStr.replace(',', '.'));
+            if (isNaN(n) || n < 1) return alert('N (số mẫu lọc nhiễu) phải >= 1!');
+            if (isNaN(t) || t < 0) return alert('Ngưỡng nhiễu (%) phải >= 0!');
+        }
+
         const formSnapshot = readForm();
         const matchName = findMatchingPreset(formSnapshot, presetsCache);
         chrome.storage.local.set({
@@ -300,6 +351,9 @@ document.addEventListener('DOMContentLoaded', function () {
             reverseMode,
             reverseType,
             subtractValue: subtractValueStr,
+            filterNoise,
+            filterSampleSize: filterSampleSizeStr,
+            filterThreshold: filterThresholdStr,
             currentPreset: matchName
         });
 
@@ -315,7 +369,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 total,
                 reverseMode,
                 reverseType,
-                subtractValue: subtractValueStr
+                subtractValue: subtractValueStr,
+                filterNoise,
+                filterSampleSize: filterSampleSizeStr,
+                filterThreshold: filterThresholdStr
             }, function (response) {
                 if (response && response.success) {
                     currentPriceEl.textContent = response.currentPrice;
